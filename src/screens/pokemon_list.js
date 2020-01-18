@@ -7,8 +7,7 @@ import { useNavigation } from '@react-navigation/native'
 
 const { width, height } = Dimensions.get('window')
 
-const getBackgroundColor = (types) => {
-    const type = types[0]
+const getBackgroundColor = (type) => {
     if (type === "Water") {
         return '#78BDFF'
     } else if (type === "Grass") {
@@ -30,7 +29,8 @@ const query = gql`
         pokemons(first: $limit) {
             name
             image
-            types 
+            types
+            number
         }
     }
 `
@@ -47,10 +47,10 @@ const BuildListItem = ({ item }) => {
             cornerRadius={15}>
             <View>
                 <Text style={styles.pokemonName}>{item.name}</Text>
-                <View style={[styles.typeContainer, { backgroundColor: getBackgroundColor(item.types) }]}>
+                <View style={[styles.typeContainer, { backgroundColor: getBackgroundColor(item.types[0]) }]}>
                     <Text style={styles.type}>{item.types[0]}</Text>
                 </View>
-                {item.types.length > 1 ? <View style={[styles.typeContainer, { backgroundColor: getBackgroundColor(item.types) }]}>
+                {item.types.length > 1 ? <View style={[styles.typeContainer, { backgroundColor: getBackgroundColor(item.types[1]) }]}>
                     <Text style={styles.type}>{item.types[1]}</Text>
                 </View> : null}
             </View>
