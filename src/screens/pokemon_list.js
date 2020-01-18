@@ -1,11 +1,27 @@
-import React, { useState } from 'react'
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, Dimensions, Image, RefreshControl, TouchableOpacity } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import {
+    View,
+    Text,
+    ActivityIndicator,
+    StyleSheet,
+    FlatList,
+    Dimensions,
+    Image,
+    TouchableOpacity
+} from 'react-native'
 import gql from 'graphql-tag'
 import { useQuery } from '@apollo/react-hooks'
-import CardView from 'react-native-cardview'
+import CardView from "react-native-cardview"
 import { useNavigation } from '@react-navigation/native'
+import FAB from 'react-native-fab'
+import Icon from 'react-native-vector-icons/Feather'
+import RBSheet from "react-native-raw-bottom-sheet"
 
 const { width, height } = Dimensions.get('window')
+
+String.prototype.capitalize = function () {
+    return this.replace(/(?:^|\s)\S/g, function (a) { return a.toUpperCase(); });
+};
 
 const getBackgroundColor = (type) => {
     if (type === "Water") {
@@ -68,12 +84,19 @@ const HeaderTitle = () => {
     return <Text style={styles.headerTitle}>Pokedex</Text>
 }
 
-const BuildList = ({ data, fetchMore, loading, limit, setLimit, isLoadingMore, setLoadingMore, refetch }) => {
-    return <FlatList
-        refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refetch} />
+const BuildList = ({ filterType, data, fetchMore, loading, limit, setLimit, isLoadingMore, setLoadingMore, refetch }) => {
+
+    const filterPokemonByType = data.filter((item) => {
+        if (filterType == '') {
+            return item
         }
-        data={data}
+        const isHasType = item.types.filter((t) => t === filterType)
+        if (isHasType.length > 0) {
+            return item
+        }
+    })
+    return <FlatList
+        data={filterPokemonByType}
         showsVerticalScrollIndicator={false}
         numColumns={2}
         renderItem={({ item }) => <BuildListItem item={item} />}
@@ -82,7 +105,6 @@ const BuildList = ({ data, fetchMore, loading, limit, setLimit, isLoadingMore, s
             setLimit(limit + 10)
             if (!isLoadingMore) {
                 setLoadingMore(true)
-
                 fetchMore({
                     variables: {
                         limit: limit + 10
@@ -100,17 +122,69 @@ const BuildList = ({ data, fetchMore, loading, limit, setLimit, isLoadingMore, s
         }}
         onEndReachedThreshold={0.3}
         ListHeaderComponent={() => <HeaderTitle />}
-        ListFooterComponent={() => isLoadingMore ? <BuildLoading /> : null}
+        ListFooterComponent={() => isLoadingMore && filterPokemonByType.length > 10 ? <BuildLoading /> : null}
     />
 }
 
-const PokemonList = () => {
+const BuildFilterView = ({ listType, filterType, setFilterType, refRBSheet }) => {
+    return (
+        <View style={{ flex: 1 }}>
+            <Text style={styles.filterTitle}>Select Pokemon Type</Text>
+            <View style={styles.filterContainer}>
+                {
+                    listType.length > 0 && listType.map((item, index) => {
+                        const typeName = item.name.capitalize()
+                        return (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setFilterType(typeName)
+                                    refRBSheet.current.close()
+                                }}
+                                style={[styles.filterItem, { backgroundColor: filterType == typeName ? '#3498db' : null }]} key={index}>
+                                <Text style={[styles.filterItemTitle, { color: filterType == typeName ? '#ffffff' : null }]}>{typeName}</Text>
+                            </TouchableOpacity>
+                        )
+                    })
+                }
+                <TouchableOpacity
+                    onPress={() => {
+                        setFilterType('')
+                        refRBSheet.current.close()
+                    }}
+                    style={[styles.filterItem, { backgroundColor: filterType == '' ? '#3498db' : null }]}>
+                    <Text style={styles.filterItemTitle}>RESET</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
+}
 
+const PokemonList = () => {
     const [limit, setLimit] = useState(10)
     const [isLoadingMore, setLoadingMore] = useState(false)
+    const [filterType, setFilterType] = useState('')
+    const refRBSheet = useRef()
     const { loading, error, data, fetchMore, refetch } = useQuery(query, {
-        variables: { limit: 10 },
+        variables: { limit: 30 },
     });
+
+    const [listType, setListType] = useState([])
+
+    async function getMoviesFromApi() {
+        try {
+            let response = await fetch(
+                'https://pokeapi.co/api/v2/type',
+            );
+            let responseJson = await response.json();
+            setListType(responseJson.results)
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    useEffect(() => {
+        getMoviesFromApi()
+    }, [])
 
     const buildContent = () => {
         if (loading) {
@@ -121,14 +195,57 @@ const PokemonList = () => {
             </View>
         }
         return <View style={styles.container}>
-            <Image  resizeMode="contain" style={styles.backgroundImage} source={{ uri: 'https://i.ya-webdesign.com/images/pokeball-icon-png-14.png'}}/>
+            <Image resizeMode="contain"
+                style={styles.backgroundImage}
+                source={{ uri: 'https://i.ya-webdesign.com/images/pokeball-icon-png-14.png' }}
+            />
             <View style={styles.foregroundContainer}>
-                <BuildList data={data.pokemons} loading={loading} fetchMore={fetchMore} setLimit={setLimit} limit={limit} isLoadingMore={isLoadingMore} setLoadingMore={setLoadingMore} refetch={refetch} />
+                <BuildList
+                    filterType={filterType}
+                    data={data.pokemons}
+                    loading={loading}
+                    fetchMore={fetchMore}
+                    setLimit={setLimit}
+                    limit={limit}
+                    isLoadingMore={isLoadingMore}
+                    setLoadingMore={setLoadingMore}
+                    refetch={refetch}
+                />
             </View>
         </View>
     }
 
-    return <View style={styles.stackContainer}>{buildContent()}</View>
+    return <View style={styles.stackContainer}>
+        {buildContent()}
+        <FAB
+            buttonColor="#6D7AD9"
+            iconTextColor="#FFFFFF"
+            onClickAction={() => {
+                refRBSheet.current.open()
+            }}
+            visible={!loading}
+            iconTextComponent={<Icon name="sliders" size={30} color="#900" />}
+        />
+        <RBSheet
+            ref={refRBSheet}
+            closeOnDragDown={true}
+            closeOnPressMask={true}
+            height={height * 0.75}
+            animationType="fade"
+            customStyles={{
+                draggableIcon: {
+                    backgroundColor: "#000"
+                }
+            }}
+        >
+            <BuildFilterView
+                listType={listType}
+                filterType={filterType}
+                setFilterType={setFilterType}
+                refRBSheet={refRBSheet}
+            />
+        </RBSheet>
+    </View>
 
 }
 
@@ -152,11 +269,10 @@ const styles = StyleSheet.create({
         width,
         height,
         top: 0,
-        left: 0
+        left: 0,
     },
     container: {
         flex: 1,
-        // backgroundColor: '#ffffff',
         paddingHorizontal: 10
     },
     loadingContainer: {
@@ -209,5 +325,31 @@ const styles = StyleSheet.create({
         marginTop: width / 6,
         marginBottom: 25,
         marginLeft: 10
+    },
+    filterItem: {
+        borderRadius: 20,
+        backgroundColor: '#ffffff',
+        padding: 5,
+        borderWidth: 1,
+        borderColor: 'gray',
+        width: 100,
+        marginHorizontal: 5,
+        marginVertical: 10,
+        alignItems: 'center',
+
+    },
+    filterContainer: {
+        flex: 1,
+        marginTop: 20,
+        justifyContent: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap'
+    },
+    filterTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        alignSelf: 'center'
+    },
+    filterItemTitle: {
     }
 })
