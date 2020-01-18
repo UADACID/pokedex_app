@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, Dimensions, Image } from 'react-native'
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, Dimensions, Image, RefreshControl, TouchableOpacity } from 'react-native'
 import gql from 'graphql-tag'
-import { Query } from 'react-apollo'
+import { useQuery } from '@apollo/react-hooks'
 import CardView from 'react-native-cardview'
+import { useNavigation } from '@react-navigation/native'
 
-const { width } = Dimensions.get('window')
+const { width, height } = Dimensions.get('window')
 
 const getBackgroundColor = (types) => {
     const type = types[0]
@@ -35,7 +36,10 @@ const query = gql`
 `
 
 const BuildListItem = ({ item }) => {
-    return <View style={styles.listItemContainer}>
+    const navigation = useNavigation()
+    return <TouchableOpacity activeOpacity={1} style={styles.listItemContainer} onPress={() => navigation.navigate('PokemonDetail', {
+        pokemon: item
+    })}>
         <CardView
             style={styles.cardContainer}
             cardElevation={3}
@@ -53,37 +57,49 @@ const BuildListItem = ({ item }) => {
             <Image style={styles.pokemonImage
             } source={{ uri: item.image }} />
         </CardView>
-    </View>
+    </TouchableOpacity>
 }
 
 const BuildLoading = () => {
-    return <View style={styles.loadingContainer}><ActivityIndicator /></View>
+    return <View style={styles.loading}><ActivityIndicator /></View>
 }
 
-const BuildList = ({ data, fetchMore, limit, setLimit, isLoadingMore, setLoadingMore }) => {
+const HeaderTitle = () => {
+    return <Text style={styles.headerTitle}>Pokedex</Text>
+}
+
+const BuildList = ({ data, fetchMore, loading, limit, setLimit, isLoadingMore, setLoadingMore, refetch }) => {
     return <FlatList
+        refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={refetch} />
+        }
         data={data}
+        showsVerticalScrollIndicator={false}
         numColumns={2}
         renderItem={({ item }) => <BuildListItem item={item} />}
         keyExtractor={(_, index) => index.toString()}
         onEndReached={() => {
             setLimit(limit + 10)
-            setLoadingMore(true)
-            fetchMore({
-                variables: {
-                    limit: limit + 10
-                },
-                updateQuery: (prev, { fetchMoreResult }) => {
-                    // console.log({ prev, fetchMoreResult })
-                    setLoadingMore(false)
-                    if (!fetchMoreResult) return prev;
-                    return Object.assign({}, prev, {
-                        pokemons: [...fetchMoreResult.pokemons]
-                    });
-                }
-            })
+            if (!isLoadingMore) {
+                setLoadingMore(true)
+
+                fetchMore({
+                    variables: {
+                        limit: limit + 10
+                    },
+                    updateQuery: (prev, { fetchMoreResult }) => {
+                        setLoadingMore(false)
+                        if (!fetchMoreResult) return prev;
+                        return Object.assign({}, prev, {
+                            pokemons: [...fetchMoreResult.pokemons]
+                        });
+                    }
+                })
+            }
+
         }}
         onEndReachedThreshold={0.3}
+        ListHeaderComponent={() => <HeaderTitle />}
         ListFooterComponent={() => isLoadingMore ? <BuildLoading /> : null}
     />
 }
@@ -92,32 +108,56 @@ const PokemonList = () => {
 
     const [limit, setLimit] = useState(10)
     const [isLoadingMore, setLoadingMore] = useState(false)
+    const { loading, error, data, fetchMore, refetch } = useQuery(query, {
+        variables: { limit: 10 },
+    });
 
-    return <Query query={query} variables={{
-        limit: 10
-    }}>
-        {(response) => {
-            // console.log(response)
-            if (response.loading) {
-                return <View style={styles.loadingContainer}><ActivityIndicator /></View>
-            } else if (response.error) {
-                return <View style={styles.container}>
-                    <Text>Terjadi Kesalahan, mohon coba kembali</Text>
-                </View>
-            }
+    const buildContent = () => {
+        if (loading) {
+            return <View style={styles.loadingContainer}><ActivityIndicator /></View>
+        } else if (error) {
             return <View style={styles.container}>
-                <BuildList data={response.data.pokemons} fetchMore={response.fetchMore} setLimit={setLimit} limit={limit} isLoadingMore={isLoadingMore} setLoadingMore={setLoadingMore} />
+                <Text>Terjadi Kesalahan, mohon coba kembali</Text>
             </View>
-        }}
-    </Query>
+        }
+        return <View style={styles.container}>
+            <Image  resizeMode="contain" style={styles.backgroundImage} source={{ uri: 'https://i.ya-webdesign.com/images/pokeball-icon-png-14.png'}}/>
+            <View style={styles.foregroundContainer}>
+                <BuildList data={data.pokemons} loading={loading} fetchMore={fetchMore} setLimit={setLimit} limit={limit} isLoadingMore={isLoadingMore} setLoadingMore={setLoadingMore} refetch={refetch} />
+            </View>
+        </View>
+    }
+
+    return <View style={styles.stackContainer}>{buildContent()}</View>
+
 }
 
 export default PokemonList;
 
 const styles = StyleSheet.create({
-    container: {
+    stackContainer: {
         flex: 1,
         backgroundColor: '#ffffff'
+    },
+    backgroundImage: {
+        opacity: 0.1,
+        width,
+        height: height / 1,
+        position: 'absolute',
+        right: - (width / 5),
+        top: - (width / 1.63)
+    },
+    foregroundContainer: {
+        position: 'absolute',
+        width,
+        height,
+        top: 0,
+        left: 0
+    },
+    container: {
+        flex: 1,
+        // backgroundColor: '#ffffff',
+        paddingHorizontal: 10
     },
     loadingContainer: {
         flex: 1,
@@ -158,10 +198,16 @@ const styles = StyleSheet.create({
         marginHorizontal: 10
     },
     loading: {
-        marginVertical: 50,
-        height: 150,
+        height: 100,
         width,
         justifyContent: 'center',
         alignItems: 'center'
+    },
+    headerTitle: {
+        fontSize: 35,
+        fontWeight: 'bold',
+        marginTop: width / 6,
+        marginBottom: 25,
+        marginLeft: 10
     }
 })

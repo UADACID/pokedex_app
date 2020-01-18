@@ -7,6 +7,7 @@ import { ApolloProvider } from 'react-apollo';
 //import ApolloClient, InMemoryCache, and HttpLink to define your client to cnnect to your graphql server.//#endregion
 import { ApolloClient, InMemoryCache, HttpLink } from 'apollo-client-preset';
 import PokemonList from './src/screens/pokemon_list'
+import PokemonDetail from './src/screens/pokemon_detail'
 
 const client = new ApolloClient({
   //Assign to your cache property a instance of a InMemoryCache
@@ -17,25 +18,6 @@ const client = new ApolloClient({
   })
 })
 
-function HomeScreen({ navigation }) {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Home Screen</Text>
-      <Button
-        title="Go to Details"
-        onPress={() => navigation.navigate('Details')}
-      />
-    </View>
-  );
-}
-
-function DetailScreen() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Detail Screen</Text>
-    </View>
-  );
-}
 
 const Stack = createStackNavigator();
 
@@ -44,8 +26,8 @@ function App() {
     <NavigationNativeContainer>
       <ApolloProvider client={client}>
       <Stack.Navigator>
-        <Stack.Screen name="PokemonList" component={PokemonList} />
-        <Stack.Screen name="Details" component={DetailScreen} />
+        <Stack.Screen name="PokemonList" component={PokemonList} options={{ headerShown: false }} />
+        <Stack.Screen name="PokemonDetail" component={PokemonDetail} />
 
       </Stack.Navigator>
       </ApolloProvider>
