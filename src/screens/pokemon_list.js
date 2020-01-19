@@ -19,6 +19,10 @@ import RBSheet from "react-native-raw-bottom-sheet"
 
 const { width, height } = Dimensions.get('window')
 
+const POKE_BALL_URL = 'https://drive.google.com/file/d/1iryz7vmqunPfZfHAXHfVdAbNZwa9Qx3Z/view'
+
+const API_TYPE_URL = 'https://pokeapi.co/api/v2/type'
+
 String.prototype.capitalize = function () {
     return this.replace(/(?:^|\s)\S/g, function (a) { return a.toUpperCase(); });
 };
@@ -173,7 +177,7 @@ const PokemonList = () => {
     async function getMoviesFromApi() {
         try {
             let response = await fetch(
-                'https://pokeapi.co/api/v2/type',
+                API_TYPE_URL,
             );
             let responseJson = await response.json();
             setListType(responseJson.results)
@@ -197,7 +201,7 @@ const PokemonList = () => {
         return <View style={styles.container}>
             <Image resizeMode="contain"
                 style={styles.backgroundImage}
-                source={{ uri: 'https://i.ya-webdesign.com/images/pokeball-icon-png-14.png' }}
+                source={{ uri: POKE_BALL_URL }}
             />
             <View style={styles.foregroundContainer}>
                 <BuildList
