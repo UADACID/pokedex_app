@@ -151,8 +151,8 @@ const BuildFilterView = ({ listType, filterType, setFilterType, refRBSheet }) =>
                         setFilterType('')
                         refRBSheet.current.close()
                     }}
-                    style={[styles.filterItem, { backgroundColor: filterType == '' ? '#3498db' : null }]}>
-                    <Text style={styles.filterItemTitle}>RESET</Text>
+                    style={[styles.filterItem, { backgroundColor: 'red'}]}>
+                    <Text style={[styles.filterItemTitle, { color: '#ffffff'}]}>RESET</Text>
                 </TouchableOpacity>
             </View>
         </View>

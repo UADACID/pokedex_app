@@ -1,5 +1,13 @@
 import React from 'react'
-import { View, Text, StyleSheet, Dimensions, Image, ActivityIndicator, TouchableOpacity } from 'react-native'
+import {
+    View,
+    Text,
+    StyleSheet,
+    Dimensions, 
+    Image, 
+    ActivityIndicator,
+    Platform
+} from 'react-native'
 import gql from 'graphql-tag'
 import { useQuery } from '@apollo/react-hooks'
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
@@ -161,7 +169,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        height: 100,
+        height: Platform.OS == 'ios' ? 150 : 100,
         alignItems: 'flex-end',
     },
     pokemonName: {
